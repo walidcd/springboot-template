@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Upload Invoice XML</title>
+</head>
+<body>
+    <h1>Upload Invoice XML</h1>
+    <form method="post" enctype="multipart/form-data" action="/upload">
+        <input type="file" name="file" accept=".xml" required />
+        <button type="submit">Generate Factur-X PDF</button>
+    </form>
+</body>
+</html>
