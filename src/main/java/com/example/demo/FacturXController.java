@@ -1,6 +1,8 @@
 package com.example.demo;
 
-import com.itextpdf.text.*;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfWriter;
 import org.mustangproject.ZUGFeRD.ZUGFeRDExporterFromA3;
@@ -10,14 +12,22 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathFactory;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/facturx")
 public class FacturXController {
 
-    // Generate a Factur-X PDF from XML (the frontend only sends XML)
+    // Generate a Factur-X PDF from XML (frontend only sends XML)
     @PostMapping(value = "/generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<byte[]> generateFromXml(@RequestParam("xml") MultipartFile xmlFile) throws Exception {
         InvoiceData invoiceData = parseXml(xmlFile);
@@ -30,7 +40,7 @@ public class FacturXController {
                 .body(facturxPdf);
     }
 
-    // Attach XML to an existing PDF (if user wants to use their own PDF layout)
+    // Attach XML to an existing PDF
     @PostMapping(value = "/attach", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<byte[]> attachXmlToPdf(
             @RequestParam("pdf") MultipartFile pdfFile,
@@ -57,12 +67,30 @@ public class FacturXController {
 
     // --- Utility methods ---
 
-    private InvoiceData parseXml(MultipartFile file) throws Exception {
-        // For now, returns dummy data (replace with real XML parsing if needed)
+    private InvoiceData parseXml(MultipartFile xmlFile) throws Exception {
         InvoiceData data = new InvoiceData();
-        data.setInvoiceNumber("INV-1001");
-        data.setCustomerName("John Doe");
-        data.setAmount(new BigDecimal("123.45"));
+
+        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+        dbFactory.setNamespaceAware(true);
+        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+        org.w3c.dom.Document doc = dBuilder.parse(xmlFile.getInputStream());
+
+        XPathFactory xPathfactory = XPathFactory.newInstance();
+        XPath xpath = xPathfactory.newXPath();
+
+        // Extract Invoice Number
+        String invoiceNumber = xpath.evaluate("//*[local-name()='ID']", doc);
+        data.setInvoiceNumber(invoiceNumber);
+
+        // Extract Customer Name
+        String customerName = xpath.evaluate("//*[local-name()='BuyerTradeParty']/*[local-name()='Name']", doc);
+        data.setCustomerName(customerName);
+
+        // Extract Amount
+        String amount = xpath.evaluate("//*[local-name()='GrandTotalAmount']", doc);
+        if (amount != null && !amount.isEmpty())
+            data.setAmount(new BigDecimal(amount));
+
         return data;
     }
 
@@ -73,11 +101,11 @@ public class FacturXController {
         PdfWriter writer = PdfWriter.getInstance(document, baos);
         document.open();
 
-        // Load and embed a font
+        // Load and embed a font for PDF/A compliance
         BaseFont bf = BaseFont.createFont(
                 "/Users/walidboutahar/Desktop/projects/springboot-template/arial/ARIAL.TTF",
                 BaseFont.IDENTITY_H,
-                BaseFont.EMBEDDED // THIS is key!
+                BaseFont.EMBEDDED
         );
         Font font = new Font(bf, 12);
 
@@ -88,7 +116,6 @@ public class FacturXController {
 
         return baos.toByteArray();
     }
-
 
     private byte[] embedXmlIntoPdf(byte[] pdfBytes, byte[] xmlBytes) throws Exception {
         File tempPdf = File.createTempFile("invoice", ".pdf");
