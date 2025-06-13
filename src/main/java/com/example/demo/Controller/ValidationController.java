@@ -34,7 +34,7 @@ public class ValidationController {
         Node summaryNode = doc.getElementsByTagName("summary").item(0);
         String status = summaryNode.getAttributes().getNamedItem("status").getNodeValue();
 
-        // Extract main error messages
+        // Extract error messages
         NodeList messages = doc.getElementsByTagName("error");
         StringBuilder msg = new StringBuilder();
         for (int i = 0; i < messages.getLength(); i++) {
@@ -43,7 +43,7 @@ public class ValidationController {
 
         String readable =
                 "**Statut :** " + status.toUpperCase() + "\n" +
-                        "**Erreurs principales :**\n" + (msg.length() > 0 ? msg.toString() : "Aucune erreur critique") +
+                        "**Erreurs :**\n" + (!msg.isEmpty() ? msg.toString() : "Aucune erreur") +
                         "\n";
 
         tempPdf.delete();

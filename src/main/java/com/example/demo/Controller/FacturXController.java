@@ -1,10 +1,5 @@
 package com.example.demo;
 
-import com.itextpdf.text.Document;
-import com.itextpdf.text.Font;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.pdf.BaseFont;
-import com.itextpdf.text.pdf.PdfWriter;
 import org.mustangproject.ZUGFeRD.ZUGFeRDExporterFromA3;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,17 +12,16 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/facturx")
 public class FacturXController {
 
-    // Generate a Factur-X PDF from XML (frontend only sends XML)
     @PostMapping(value = "/generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<byte[]> generateFromXml(@RequestParam("xml") MultipartFile xmlFile) throws Exception {
         InvoiceData invoiceData = parseXml(xmlFile);
@@ -40,12 +34,11 @@ public class FacturXController {
                 .body(facturxPdf);
     }
 
-    // Attach XML to an existing PDF
     @PostMapping(value = "/attach", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<byte[]> attachXmlToPdf(
             @RequestParam("pdf") MultipartFile pdfFile,
             @RequestParam("xml") MultipartFile xmlFile
-    ) throws IOException {
+    ) throws Exception {
         File tempPdf = File.createTempFile("input", ".pdf");
         pdfFile.transferTo(tempPdf);
 
@@ -65,8 +58,7 @@ public class FacturXController {
                 .body(outputStream.toByteArray());
     }
 
-    // --- Utility methods ---
-
+    // Utility: Parse XML and return InvoiceData
     private InvoiceData parseXml(MultipartFile xmlFile) throws Exception {
         InvoiceData data = new InvoiceData();
 
@@ -86,37 +78,53 @@ public class FacturXController {
         String customerName = xpath.evaluate("//*[local-name()='BuyerTradeParty']/*[local-name()='Name']", doc);
         data.setCustomerName(customerName);
 
+        // Extract Date
+        String date = xpath.evaluate("//*[local-name()='IssueDateTime']/*[local-name()='DateTimeString']", doc);
+        data.setDate(date);
+
         // Extract Amount
         String amount = xpath.evaluate("//*[local-name()='GrandTotalAmount']", doc);
         if (amount != null && !amount.isEmpty())
             data.setAmount(new BigDecimal(amount));
+        else
+            data.setAmount(BigDecimal.ZERO);
 
         return data;
     }
 
+    // Use PDFBox template for invoice design
     private byte[] generatePdf(InvoiceData data) throws Exception {
-        Document document = new Document();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        // Load XSL-FO template as string
+        String foTemplate = new String(getClass().getResourceAsStream("/invoice-template.fo").readAllBytes(), "UTF-8");
 
-        PdfWriter writer = PdfWriter.getInstance(document, baos);
-        document.open();
+        // Replace placeholders with data
+        foTemplate = foTemplate.replace("{{INVOICE_NUMBER}}", data.getInvoiceNumber());
+        foTemplate = foTemplate.replace("{{CUSTOMER}}", data.getCustomerName());
+        foTemplate = foTemplate.replace("{{DATE}}", data.getDate());
+        foTemplate = foTemplate.replace("{{AMOUNT}}", data.getAmount().toString());
 
-        // Load and embed a font for PDF/A compliance
-        BaseFont bf = BaseFont.createFont(
-                "/Users/walidboutahar/Desktop/projects/springboot-template/arial/ARIAL.TTF",
-                BaseFont.IDENTITY_H,
-                BaseFont.EMBEDDED
-        );
-        Font font = new Font(bf, 12);
+        // Convert filled FO to InputStream
+        ByteArrayInputStream foInput = new ByteArrayInputStream(foTemplate.getBytes("UTF-8"));
+        ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
 
-        document.add(new Paragraph("Invoice Number: " + data.getInvoiceNumber(), font));
-        document.add(new Paragraph("Customer Name: " + data.getCustomerName(), font));
-        document.add(new Paragraph("Amount: " + data.getAmount(), font));
-        document.close();
+        // FOP setup
+        org.apache.fop.apps.FopFactory fopFactory = org.apache.fop.apps.FopFactory.newInstance(new File(".").toURI());
+        org.apache.fop.apps.FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
+        org.apache.fop.apps.Fop fop = fopFactory.newFop(org.apache.xmlgraphics.util.MimeConstants.MIME_PDF, foUserAgent, pdfOut);
 
-        return baos.toByteArray();
+        javax.xml.transform.TransformerFactory factory = javax.xml.transform.TransformerFactory.newInstance();
+        javax.xml.transform.Transformer transformer = factory.newTransformer();
+
+        javax.xml.transform.Source src = new javax.xml.transform.stream.StreamSource(foInput);
+        javax.xml.transform.Result res = new javax.xml.transform.sax.SAXResult(fop.getDefaultHandler());
+
+        transformer.transform(src, res);
+
+        return pdfOut.toByteArray();
     }
 
+
+    // Embed XML into PDF as Factur-X (ZUGFeRD)
     private byte[] embedXmlIntoPdf(byte[] pdfBytes, byte[] xmlBytes) throws Exception {
         File tempPdf = File.createTempFile("invoice", ".pdf");
         try (FileOutputStream fos = new FileOutputStream(tempPdf)) {
