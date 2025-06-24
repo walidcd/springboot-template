@@ -1,4 +1,4 @@
-package com.example.demo;
+package com.example.demo.pdfbox;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;

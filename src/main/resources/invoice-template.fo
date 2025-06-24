@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format">
+  <fo:layout-master-set>
+    <fo:simple-page-master master-name="A4" page-height="29.7cm" page-width="21cm" margin="2cm">
+      <fo:region-body/>
+      <fo:region-after extent="2cm"/>
+    </fo:simple-page-master>
+  </fo:layout-master-set>
+  <fo:page-sequence master-reference="A4">
+    <!-- STATIC CONTENT FIRST -->
+    <fo:static-content flow-name="xsl-region-after">
+      <fo:block text-align="center" font-size="9pt" color="#bbb">
+        {{sellerName}} | Facture générée automatiquement
+      </fo:block>
+    </fo:static-content>
+
+    <!-- MAIN FLOW AFTER -->
+    <fo:flow flow-name="xsl-region-body">
+      <!-- Header -->
+      <fo:block font-size="24pt" font-weight="bold" text-align="center" color="#363636" margin-bottom="10mm">
+        FACTURE
+      </fo:block>
+      <fo:block font-size="12pt" font-weight="bold" color="#5c5c5c" margin-bottom="8mm">
+        N°: <fo:inline font-weight="normal">{{invoiceNumber}}</fo:inline> &#160;|&#160;
+        Date: <fo:inline font-weight="normal">{{invoiceDate}}</fo:inline>
+      </fo:block>
+
+      <!-- Seller/Buyer -->
+      <fo:table table-layout="fixed" width="100%" margin-bottom="10mm">
+        <fo:table-column column-width="48%"/>
+        <fo:table-column column-width="4%"/>
+        <fo:table-column column-width="48%"/>
+        <fo:table-body>
+          <fo:table-row>
+            <fo:table-cell>
+              <fo:block font-weight="bold" color="#4B77BE">Vendeur:</fo:block>
+              <fo:block>{{sellerName}}</fo:block>
+              <fo:block>SIREN: {{sellerSiren}}</fo:block>
+              <fo:block>TVA: {{sellerVatId}}</fo:block>
+            </fo:table-cell>
+            <fo:table-cell>
+              <fo:block/>
+            </fo:table-cell>
+            <fo:table-cell>
+              <fo:block font-weight="bold" color="#26A65B">Acheteur:</fo:block>
+              <fo:block>{{buyerName}}</fo:block>
+              <fo:block>SIREN: {{buyerSiren}}</fo:block>
+            </fo:table-cell>
+          </fo:table-row>
+        </fo:table-body>
+      </fo:table>
+
+      <!-- References -->
+      <fo:block font-size="10pt" color="#333" margin-bottom="5mm">
+        Référence Acheteur: <fo:inline font-weight="bold">{{buyerReference}}</fo:inline>
+        <fo:inline>&#160;&#160;&#160;</fo:inline>
+        Référence Commande: <fo:inline font-weight="bold">{{orderReference}}</fo:inline>
+      </fo:block>
+
+      <!-- Totals -->
+      <fo:block font-size="12pt" text-align="right" margin-bottom="2mm">
+        Montant HT: <fo:inline font-weight="bold">{{dueTotal}} {{currency}}</fo:inline>
+      </fo:block>
+      <fo:block font-size="12pt" text-align="right" margin-bottom="2mm">
+        TVA: <fo:inline font-weight="bold">{{taxTotal}} {{currency}}</fo:inline>
+      </fo:block>
+      <fo:block font-size="14pt" font-weight="bold" color="#003366" text-align="right" margin-bottom="10mm">
+        Total TTC: {{grandTotal}} {{currency}}
+      </fo:block>
+
+      <fo:block font-size="9pt" color="#888" margin-top="8mm">
+        Merci pour votre confiance.
+      </fo:block>
+    </fo:flow>
+  </fo:page-sequence>
+</fo:root>

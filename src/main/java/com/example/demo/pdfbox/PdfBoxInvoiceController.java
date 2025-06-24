@@ -1,4 +1,5 @@
-package com.example.demo;// In your Spring Controller
+package com.example.demo.pdfbox;// In your Spring Controller
+import com.example.demo.pdfbox.InvoicePdfBox;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 
