@@ -1,24 +1,43 @@
 kind: pipeline
 type: docker
-name: build-test-deploy
-
+name: build
 steps:
-  - name: build
-    image: maven:3.8.5-openjdk-17
+  - name: build project
+    image: maven:3.6.3-jdk-13
     commands:
       - mvn clean install
-
-  - name: test
-    image: maven:3.8.5-openjdk-17
-    commands:
-      - mvn test
-
-  - name: docker_build_and_push
+  - name: build & publish docker image
     image: plugins/docker
     settings:
-      repo: username/facturx-microservice
-      tags: latest
+      dockerfile: ./Dockerfile
       username:
-        from_secret: facturx_user
+        from_secret: registry_username
       password:
-        from_secret: facturx_secret
+        from_secret: registry_password
+      repo: registry.marynsoft.com/r-d/facturx
+      registry: registry.marynsoft.com
+      insecure: true
+      tags:
+        - latest
+  - name: Deploy
+    image: appleboy/drone-ssh
+    settings:
+      host: 10.0.20.14
+      username:
+        from_secret: ssh_user
+      password:
+        from_secret: ssh_password
+      port: 22
+      script:
+        - cd app
+        - docker-compose pull
+        - docker-compose up -d
+# volumes:
+# - name: cache
+#   host:
+#     path: /var/docker/drone/cache/backend
+trigger:
+  branch:
+    - master
+  event:
+    - push
