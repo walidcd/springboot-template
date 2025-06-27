@@ -30,9 +30,9 @@ steps:
         from_secret: ssh_password
       port: 22
       script:
-        - cd /app
-        - docker-compose pull
-        - docker-compose up -d
+        - cd app
+        - docker-compose-FX pull
+        - docker-compose-FX up -d
 # volumes:
 # - name: cache
 #   host:
