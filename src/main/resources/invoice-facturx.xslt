@@ -4,30 +4,35 @@
                 xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
                 xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
                 xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100"
+                xmlns:xs="http://www.w3.org/2001/XMLSchema"
                 xmlns:f="urn:local-func"
-                exclude-result-prefixes="rsm ram udt f">
+                exclude-result-prefixes="rsm ram udt xs f">
 
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
 
+    <!-- colours & fonts -->
     <xsl:variable name="clr-navy"   select="'#002060'"/>
     <xsl:variable name="clr-steel"  select="'#dbe6f5'"/>
     <xsl:variable name="clr-pastel" select="'#c5d9f1'"/>
     <xsl:variable name="clr-red"    select="'#ff3300'"/>
     <xsl:variable name="base-font"  select="'Calibri, Helvetica, Arial, sans-serif'"/>
 
+    <!-- yyyyMMdd → dd/MM/yyyy -->
     <xsl:function name="f:fmt-date">
         <xsl:param name="raw"/>
         <xsl:sequence select="
-      if (string-length($raw)=8)
-         then concat(substring($raw,7,2),'/',substring($raw,5,2),'/',substring($raw,1,4))
-         else $raw"/>
+        if (string-length($raw)=8)
+           then concat(substring($raw,7,2),'/',substring($raw,5,2),'/',substring($raw,1,4))
+           else $raw"/>
     </xsl:function>
+
+    <!-- header-level billing period -->
     <xsl:variable name="hdrPeriod"
-                  select="/rsm:CrossIndustryInvoice
-                      /rsm:SupplyChainTradeTransaction
-                      /ram:ApplicableHeaderTradeSettlement
-                      /ram:BillingSpecifiedPeriod"/>
+                  select="/rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction
+            /ram:ApplicableHeaderTradeSettlement/ram:BillingSpecifiedPeriod"/>
+
+    <!-- ───── ROOT ──────────────────────────────────────────────────────────── -->
     <xsl:template match="/">
         <fo:root font-family="{$base-font}" font-size="9pt" line-height="13pt">
             <fo:layout-master-set>
@@ -43,6 +48,7 @@
 
             <fo:page-sequence master-reference="A4">
 
+                <!-- ── HEADER ─────────────────────────────────────────────────────── -->
                 <fo:static-content flow-name="xsl-region-before">
                     <fo:table table-layout="fixed" width="100%">
                         <fo:table-column column-width="60%"/>
@@ -78,6 +84,7 @@
                     <xsl:call-template name="top-reference-blocks"/>
                 </fo:static-content>
 
+                <!-- ── FOOTER ─────────────────────────────────────────────────────── -->
                 <fo:static-content flow-name="xsl-region-after">
                     <fo:block text-align="center" font-size="8pt" color="gray">
                         <xsl:value-of select="//ram:IncludedNote[ram:SubjectCode='REG']/ram:Content"/>
@@ -86,6 +93,7 @@
                     </fo:block>
                 </fo:static-content>
 
+                <!-- ── BODY ───────────────────────────────────────────────────────── -->
                 <fo:flow flow-name="xsl-region-body">
                     <fo:block space-after="4pt">
                         DATE DE DÉBUT DE PRESTATION :
@@ -106,6 +114,7 @@
         </fo:root>
     </xsl:template>
 
+    <!-- ───── SELLER INFO ──────────────────────────────────────────────────── -->
     <xsl:template name="seller-info">
         <xsl:variable name="s" select="//ram:SellerTradeParty"/>
         <fo:block font-weight="bold"><xsl:value-of select="$s/ram:Name"/></fo:block>
@@ -118,6 +127,7 @@
         <fo:block>N° TVA : <xsl:value-of select="$s/ram:SpecifiedTaxRegistration/ram:ID"/></fo:block>
     </xsl:template>
 
+    <!-- ───── GENERIC SUB-BLOCK BOX ────────────────────────────────────────── -->
     <xsl:template name="sub-block">
         <xsl:param name="title"/>
         <xsl:param name="content"/>
@@ -129,11 +139,14 @@
         </fo:block>
     </xsl:template>
 
+    <!-- ───── TOP REFERENCE TABLES (border frame) ──────────────────────────── -->
     <xsl:template name="top-reference-blocks">
-        <fo:table table-layout="fixed" width="100%" font-size="9pt" space-before="4pt">
+        <fo:table table-layout="fixed" width="100%" font-size="9pt" space-before="4pt"
+                  border="0.5pt solid {$clr-navy}">
             <fo:table-column column-width="60%"/>
             <fo:table-column column-width="40%"/>
             <fo:table-body>
+                <!-- Buyer refs -->
                 <fo:table-row>
                     <fo:table-cell>
                         <xsl:call-template name="sub-block">
@@ -145,6 +158,7 @@
                             </xsl:with-param>
                         </xsl:call-template>
                     </fo:table-cell>
+                    <!-- Buyer address -->
                     <fo:table-cell>
                         <xsl:variable name="b" select="//ram:BuyerTradeParty"/>
                         <xsl:call-template name="sub-block">
@@ -158,6 +172,7 @@
                         </xsl:call-template>
                     </fo:table-cell>
                 </fo:table-row>
+                <!-- References / identifiers -->
                 <fo:table-row>
                     <fo:table-cell>
                         <xsl:call-template name="sub-block">
@@ -183,8 +198,10 @@
         </fo:table>
     </xsl:template>
 
+    <!-- ───── LINES TABLE ─────────────────────────────────────────────────── -->
     <xsl:template name="lines-table">
-        <fo:table table-layout="auto" width="100%" margin-top="6pt">
+        <fo:table table-layout="auto" width="100%" margin-top="6pt"
+                  border="0.5pt solid {$clr-navy}">
             <fo:table-column column-width="10mm"/>
             <fo:table-column column-width="20mm"/>
             <fo:table-column column-width="proportional-column-width(4)"/>
@@ -194,8 +211,9 @@
             <fo:table-column column-width="25mm"/>
             <fo:table-column column-width="25mm"/>
             <fo:table-column column-width="15mm"/>
+
             <fo:table-header background-color="{$clr-navy}" color="white" font-weight="bold" font-size="8.5pt">
-                <fo:table-row>
+                <fo:table-row border-bottom="0.75pt solid {$clr-navy}">
                     <fo:table-cell><fo:block>#</fo:block></fo:table-cell>
                     <fo:table-cell><fo:block># BC</fo:block></fo:table-cell>
                     <fo:table-cell><fo:block>NOM &amp; DESIGNATION</fo:block></fo:table-cell>
@@ -207,8 +225,9 @@
                     <fo:table-cell><fo:block>TVA %</fo:block></fo:table-cell>
                 </fo:table-row>
             </fo:table-header>
+
             <fo:table-body background-color="{$clr-steel}">
-                <xsl:for-each select="//ram:IncludedSupplyChainTradeLineItem">
+                <xsl:for-each select="//ram:IncludedSupplyChainTradeLineItem[ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount castable as xs:decimal]">
                     <fo:table-row keep-together.within-page="always">
                         <fo:table-cell><fo:block><xsl:value-of select="ram:AssociatedDocumentLineDocument/ram:LineID"/></fo:block></fo:table-cell>
                         <fo:table-cell><fo:block><xsl:value-of select="ram:SpecifiedLineTradeAgreement/ram:BuyerOrderReferencedDocument/ram:LineID"/></fo:block></fo:table-cell>
@@ -228,24 +247,36 @@
         </fo:table>
     </xsl:template>
 
+    <!-- ───── HEADER-ALLOWANCES TABLE (inner grid) ─────────────────────────── -->
     <xsl:template name="header-allowances">
         <xsl:variable name="ac" select="//ram:SpecifiedTradeAllowanceCharge"/>
         <xsl:if test="$ac">
-            <fo:table table-layout="fixed" width="100%" font-size="9pt" margin-top="6pt">
+            <fo:table table-layout="fixed" width="100%" font-size="9pt" margin-top="6pt"
+                      border="0.5pt solid {$clr-navy}" border-collapse="collapse">
                 <fo:table-column column-width="80%"/>
                 <fo:table-column column-width="20%"/>
                 <fo:table-body>
-                    <xsl:for-each select="$ac">
+                    <xsl:for-each select="$ac[ram:ActualAmount castable as xs:decimal]">
+                        <xsl:variable name="pct"  select="ram:CalculationPercent"/>
+                        <xsl:variable name="base" select="ram:BasisAmount"/>
+                        <xsl:variable name="amt"  select="ram:ActualAmount"/>
                         <fo:table-row>
-                            <fo:table-cell>
+                            <fo:table-cell border="0.25pt solid {$clr-navy}">
                                 <fo:block>
-                                    <xsl:value-of select="ram:ReasonCode"/> <xsl:value-of select="ram:Reason"/> :
-                                    <xsl:value-of select="format-number(ram:CalculationPercent,'#,##0.00')"/> % sur
-                                    <xsl:value-of select="format-number(ram:BasisAmount,'#,##0.00')"/>
+                                    <xsl:value-of select="normalize-space(concat(ram:ReasonCode,' ',ram:Reason))"/>
+                                    <xsl:if test="$pct castable as xs:decimal">
+                                        <xsl:text> : </xsl:text>
+                                        <xsl:value-of select="format-number($pct,'#,##0.00')"/> %
+                                    </xsl:if>
+                                    <xsl:if test="$base castable as xs:decimal">
+                                        <xsl:text> sur </xsl:text>
+                                        <xsl:value-of select="format-number($base,'#,##0.00')"/>
+                                    </xsl:if>
                                 </fo:block>
                             </fo:table-cell>
-                            <fo:table-cell text-align="right" color="{if (ram:ChargeIndicator/udt:Indicator='false') then $clr-red else 'black'}">
-                                <fo:block><xsl:value-of select="format-number(ram:ActualAmount,'#,##0.00')"/></fo:block>
+                            <fo:table-cell border="0.25pt solid {$clr-navy}" text-align="right"
+                                           color="{if (ram:ChargeIndicator/udt:Indicator='false') then $clr-red else 'black'}">
+                                <fo:block><xsl:value-of select="format-number($amt,'#,##0.00')"/></fo:block>
                             </fo:table-cell>
                         </fo:table-row>
                     </xsl:for-each>
@@ -254,8 +285,10 @@
         </xsl:if>
     </xsl:template>
 
+    <!-- ───── TAX SUMMARY ──────────────────────────────────────────────────── -->
     <xsl:template name="tax-summary">
-        <fo:table table-layout="fixed" width="100%" margin-top="6pt">
+        <fo:table table-layout="fixed" width="100%" margin-top="6pt"
+                  border="0.5pt solid {$clr-navy}">
             <fo:table-column column-width="25%"/>
             <fo:table-column column-width="25%"/>
             <fo:table-column column-width="25%"/>
@@ -269,7 +302,7 @@
                 </fo:table-row>
             </fo:table-header>
             <fo:table-body>
-                <xsl:for-each select="//ram:ApplicableTradeTax">
+                <xsl:for-each select="//ram:ApplicableTradeTax[ram:CalculatedAmount castable as xs:decimal]">
                     <fo:table-row>
                         <fo:table-cell><fo:block><xsl:value-of select="ram:CategoryCode"/></fo:block></fo:table-cell>
                         <fo:table-cell><fo:block><xsl:value-of select="format-number(ram:RateApplicablePercent,'#,##0.00')"/> %</fo:block></fo:table-cell>
@@ -281,9 +314,11 @@
         </fo:table>
     </xsl:template>
 
+    <!-- ───── TOTALS BAR (bold frame) ──────────────────────────────────────── -->
     <xsl:template name="totals-bar">
         <xsl:variable name="s" select="//ram:SpecifiedTradeSettlementHeaderMonetarySummation"/>
-        <fo:table table-layout="fixed" width="100%" margin-top="6pt">
+        <fo:table table-layout="fixed" width="100%" margin-top="6pt"
+                  border="1pt solid {$clr-navy}">
             <fo:table-column column-width="33%"/>
             <fo:table-column column-width="33%"/>
             <fo:table-column column-width="34%"/>
@@ -304,13 +339,15 @@
         </fo:table>
     </xsl:template>
 
+    <!-- ───── PAYMENT BLOCK (bold frame) ───────────────────────────────────── -->
     <xsl:template name="payment-block">
-        <xsl:variable name="due" select="//ram:SpecifiedTradePaymentTerms/ram:DueDateDateTime/udt:DateTimeString"/>
-        <xsl:variable name="s"   select="//ram:SpecifiedTradeSettlementHeaderMonetarySummation"/>
-        <xsl:variable name="pm"  select="//ram:SpecifiedTradeSettlementPaymentMeans"/>
+        <xsl:variable name="due"   select="//ram:SpecifiedTradePaymentTerms/ram:DueDateDateTime/udt:DateTimeString"/>
+        <xsl:variable name="s"     select="//ram:SpecifiedTradeSettlementHeaderMonetarySummation"/>
+        <xsl:variable name="pm"    select="//ram:SpecifiedTradeSettlementPaymentMeans"/>
         <xsl:variable name="payee" select="//ram:PayeeTradeParty"/>
 
-        <fo:table table-layout="fixed" width="100%" font-size="9pt" margin-top="8pt">
+        <fo:table table-layout="fixed" width="100%" font-size="9pt" margin-top="8pt"
+                  border="1pt solid {$clr-navy}">
             <fo:table-column column-width="50%"/>
             <fo:table-column column-width="50%"/>
             <fo:table-body>
@@ -321,7 +358,11 @@
                     </fo:table-cell>
                     <fo:table-cell border="0.5pt solid {$clr-navy}" padding="3pt">
                         <fo:block font-weight="bold">NET A PAYER</fo:block>
-                        <fo:block font-weight="bold"><xsl:value-of select="format-number($s/ram:DuePayableAmount,'#,##0.00')"/> <xsl:value-of select="//ram:InvoiceCurrencyCode"/></fo:block>
+                        <fo:block font-weight="bold">
+                            <xsl:value-of select="format-number($s/ram:DuePayableAmount,'#,##0.00')"/>
+                            <xsl:text> </xsl:text>
+                            <xsl:value-of select="//ram:InvoiceCurrencyCode"/>
+                        </fo:block>
                     </fo:table-cell>
                 </fo:table-row>
             </fo:table-body>
