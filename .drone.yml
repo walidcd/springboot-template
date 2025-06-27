@@ -30,7 +30,7 @@ steps:
         from_secret: ssh_password
       port: 22
       script:
-        - cd app
+        - cd /app/target
         - docker-compose pull
         - docker-compose up -d
 # volumes:
