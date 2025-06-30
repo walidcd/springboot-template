@@ -32,7 +32,8 @@ steps:
       port: 22
       script:
         - cd app
-        - java -jar app.jar
+        - docker-compose-FX pull
+        - docker-compose-FX up -d
 # volumes:
 # - name: cache
 #   host:
