@@ -32,7 +32,8 @@ steps:
       port: 22
       script:
         - cd app
-        - ls -l
+        - docker-compose pull
+        - docker-compose up -d
 # volumes:
 # - name: cache
 #   host:
