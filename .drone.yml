@@ -4,7 +4,7 @@ name: pre-prod
 
 steps:
   - name: build project
-    image: maven:3.6.3-jdk-13
+    image: maven:3.8.3-openjdk-17
     commands:
       - mvn clean install
   - name: build & publish docker image
